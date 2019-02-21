@@ -10,7 +10,7 @@ import equal from 'deep-equal';
 import extend from 'extend';
 
 
-const ASCII = /^[ -~]*$/;
+// const ASCII = /^[ -~]*$/;
 
 
 class Editor {
@@ -194,7 +194,7 @@ class Editor {
     let oldDelta = this.delta;
     if (mutations.length === 1 &&
         mutations[0].type === 'characterData' &&
-        mutations[0].target.data.match(ASCII) &&
+        // mutations[0].target.data.match(ASCII) // why is it here?
         Parchment.find(mutations[0].target)) {
       // Optimization for character changes
       let textBlot = Parchment.find(mutations[0].target);
