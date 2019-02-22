@@ -1,3 +1,4 @@
+import Delta from 'quill-delta';
 import Parchment from 'parchment';
 import Quill from '../core/quill';
 import Module from '../core/module';
@@ -47,7 +48,22 @@ class History extends Module {
   record(changeDelta, oldDelta) {
     if (changeDelta.ops.length === 0) return;
     this.stack.redo = [];
-    let undoDelta = this.quill.getContents().diff(oldDelta);
+    let undoDelta = null;
+    if (changeDelta.ops.length == 2 &&
+        changeDelta.ops[0]['retain'] &&
+        changeDelta.ops[1]['insert']
+    ){
+        undoDelta = new Delta({
+            'ops': [
+                { 'retain': changeDelta.ops[0]['retain'] },
+                { 'delete': changeDelta.ops[1]['insert'].length },
+            ],
+        });
+        // optimization for character changes
+
+    } else {
+        undoDelta = this.quill.getContents().diff(oldDelta);
+    }
     let timestamp = Date.now();
     if (this.lastRecorded + this.options.delay > timestamp && this.stack.undo.length > 0) {
       let delta = this.stack.undo.pop();
