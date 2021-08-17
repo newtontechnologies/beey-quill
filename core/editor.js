@@ -1,4 +1,4 @@
-import Delta from 'quill-delta';
+import Delta, { Op } from 'quill-delta';
 import DeltaOp from 'quill-delta/lib/op';
 import Parchment from 'parchment';
 import CodeBlock from '../formats/code';
@@ -24,7 +24,7 @@ class Editor {
     this.scroll.batchStart();
     delta = normalizeDelta(delta);
     delta.reduce((index, op) => {
-      let length = op.retain || op.delete || op.insert.length || 1;
+      const length = Op.length(op);
       let attributes = op.attributes || {};
       if (op.insert != null) {
         if (typeof op.insert === 'string') {
@@ -61,7 +61,7 @@ class Editor {
         this.scroll.deleteAt(index, op.delete);
         return index;
       }
-      return index + (op.retain || op.insert.length || 1);
+      return index + Op.length(op);
     }, 0);
     this.scroll.batchEnd();
     return this.update(delta, undefined, undefined, originalDelta);
