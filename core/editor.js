@@ -1,9 +1,9 @@
 import Delta, { Op } from 'quill-delta';
 import DeltaOp from 'quill-delta/lib/op';
-import Parchment from 'parchment';
+import Parchment, { Scope } from 'parchment';
 import CodeBlock from '../formats/code';
 import CursorBlot from '../blots/cursor';
-import Block, { bubbleFormats } from '../blots/block';
+import Block, { BlockEmbed, bubbleFormats } from '../blots/block';
 import Break from '../blots/break';
 import clone from 'clone';
 import equal from 'deep-equal';
@@ -18,23 +18,29 @@ class Editor {
 
   applyDelta(delta) {
     const originalDelta = clone(delta);
-    let consumeNextNewline = false;
     this.scroll.update();
     let scrollLength = this.scroll.length();
     this.scroll.batchStart();
-    delta = normalizeDelta(delta);
-    delta.reduce((index, op) => {
+    // Track indexes of violations of newline requirements
+    // (at end of doc and before block embeds)
+    const implicitNewlines = [];
+    const normalizedDelta = normalizeDelta(delta);
+    normalizedDelta.reduce((index, op) => {
       const length = Op.length(op);
       let attributes = op.attributes || {};
       if (op.insert != null) {
         if (typeof op.insert === 'string') {
           let text = op.insert;
-          if (text.endsWith('\n') && consumeNextNewline) {
-            consumeNextNewline = false;
+          if (text.endsWith('\n') && implicitNewlines.length > 0) {
+            implicitNewlines.shift();
             text = text.slice(0, -1);
           }
-          if (index >= scrollLength && !text.endsWith('\n')) {
-            consumeNextNewline = true;
+          if (
+            (index >= scrollLength ||
+              this.scroll.descendant(BlockEmbed, index)[0]) &&
+            !text.endsWith('\n')
+          ) {
+            implicitNewlines.push(index + length);
           }
           this.scroll.insertAt(index, text);
           let [line, offset] = this.scroll.line(index);
@@ -47,6 +53,12 @@ class Editor {
         } else if (typeof op.insert === 'object') {
           let key = Object.keys(op.insert)[0];  // There should only be one key
           if (key == null) return index;
+          if (
+            this.scroll.query(key, Scope.INLINE) != null &&
+            this.scroll.descendant(BlockEmbed, index)[0]
+          ) {
+            implicitNewlines.push(index);
+          }
           this.scroll.insertAt(index, key, op.insert[key]);
         }
         scrollLength += length;
@@ -56,7 +68,10 @@ class Editor {
       });
       return index + length;
     }, 0);
-    delta.reduce((index, op) => {
+    const implicitDelta = implicitNewlines.reduce((delta, index) => {
+      return delta.retain(index).delete(1);
+    }, new Delta());
+    normalizedDelta.compose(implicitDelta).reduce((index, op) => {
       if (typeof op.delete === 'number') {
         this.scroll.deleteAt(index, op.delete);
         return index;
@@ -64,7 +79,7 @@ class Editor {
       return index + Op.length(op);
     }, 0);
     this.scroll.batchEnd();
-    return this.update(delta, undefined, undefined, originalDelta);
+    return this.update(normalizedDelta, undefined, undefined, originalDelta);
   }
 
   deleteText(index, length) {
