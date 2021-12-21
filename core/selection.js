@@ -227,6 +227,55 @@ class Selection {
     return range;
   }
 
+
+  isNodeEditable(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (node.parentElement === null) return false;
+      return node.parentElement.isContentEditable;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      return node.isContentEditable;
+    }
+    return false;
+  }
+
+  getNodeLength(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.length;
+    }
+    return node.childNodes.length;
+  }
+
+  /*
+    suggests new selection range such that selection with such range will be editable.
+    In some situations, caret is on the beginning or end of uneditable node.
+    Such caret position can be fixed so that it is on the same place, but inside editable element.
+  */
+  fixUneditablePosition(node, offset) {
+    const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    const nodeLength = this.getNodeLength(node);
+    if (element === null || element.isContentEditable) {
+      // content is editable, nothing to fix.
+      return [node, offset];
+    }
+    const previousNode = element.previousSibling;
+    const nextNode = element.nextSibling;
+    if (offset === 0) { // selection is at the beginning of an uneditable node.
+      if (previousNode !== null && this.isNodeEditable(previousNode)) {
+        return [previousNode, this.getNodeLength(previousNode)];
+      } else if (element.parentElement !== null) {
+        return [element.parentElement, 0];
+      }
+    } else if (offset === nodeLength) { // selection is at the end of an uneditable node
+      if (nextNode !== null && this.isNodeEditable(nextNode)) {
+        return [nextNode, 0];
+      } else if (element.parentElement !== null) {
+        return [element.parentElement, this.getNodeLength(element.parentElement)];
+      }
+    }
+    return [node, offset];
+  }
+
   rangeToNative(range) {
     let indexes = range.collapsed ? [range.index] : [range.index, range.index + range.length];
     let args = [];
@@ -235,7 +284,8 @@ class Selection {
       index = Math.min(scrollLength - 1, index);
       let node, [leaf, offset] = this.scroll.leaf(index);
       [node, offset] = leaf.position(offset, i !== 0);
-      args.push(node, offset);
+      const [fixedNode, fixedOffset] = this.fixUneditablePosition(node, offset);
+      args.push(fixedNode, fixedOffset);
     });
     if (args.length < 2) {
       args = args.concat(args);
