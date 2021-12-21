@@ -1,5 +1,5 @@
 /*!
- * Quill Editor v1.3.6
+ * Quill Editor v1.4.0
  * https://quilljs.com/
  * Copyright (c) 2014, Jason Chen
  * Copyright (c) 2013, salesforce.com
@@ -1583,7 +1583,7 @@ Quill.DEFAULTS = {
 Quill.events = _emitter4.default.events;
 Quill.sources = _emitter4.default.sources;
 // eslint-disable-next-line no-undef
-Quill.version =  false ? 'dev' : "1.3.6";
+Quill.version =  false ? 'dev' : "1.4.0";
 
 Quill.imports = {
   'delta': _quillDelta2.default,
@@ -3186,6 +3186,61 @@ var Selection = function () {
       return range;
     }
   }, {
+    key: 'isNodeEditable',
+    value: function isNodeEditable(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (node.parentElement === null) return false;
+        return node.parentElement.isContentEditable;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        return node.isContentEditable;
+      }
+      return false;
+    }
+  }, {
+    key: 'getNodeLength',
+    value: function getNodeLength(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.length;
+      }
+      return node.childNodes.length;
+    }
+
+    /*
+      suggests new selection range such that selection with such range will be editable.
+      In some situations, caret is on the beginning or end of uneditable node.
+      Such caret position can be fixed so that it is on the same place, but inside editable element.
+    */
+
+  }, {
+    key: 'fixUneditablePosition',
+    value: function fixUneditablePosition(node, offset) {
+      var element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      var nodeLength = this.getNodeLength(node);
+      if (element === null || element.isContentEditable) {
+        // content is editable, nothing to fix.
+        return [node, offset];
+      }
+      var previousNode = element.previousSibling;
+      var nextNode = element.nextSibling;
+      if (offset === 0) {
+        // selection is at the beginning of an uneditable node.
+        if (previousNode !== null && this.isNodeEditable(previousNode)) {
+          return [previousNode, this.getNodeLength(previousNode)];
+        } else if (element.parentElement !== null) {
+          return [element.parentElement, 0];
+        }
+      } else if (offset === nodeLength) {
+        // selection is at the end of an uneditable node
+        if (nextNode !== null && this.isNodeEditable(nextNode)) {
+          return [nextNode, 0];
+        } else if (element.parentElement !== null) {
+          return [element.parentElement, this.getNodeLength(element.parentElement)];
+        }
+      }
+      return [node, offset];
+    }
+  }, {
     key: 'rangeToNative',
     value: function rangeToNative(range) {
       var _this5 = this;
@@ -3207,7 +3262,12 @@ var Selection = function () {
         node = _leaf$position6[0];
         offset = _leaf$position6[1];
 
-        args.push(node, offset);
+        var _fixUneditablePositio = _this5.fixUneditablePosition(node, offset),
+            _fixUneditablePositio2 = _slicedToArray(_fixUneditablePositio, 2),
+            fixedNode = _fixUneditablePositio2[0],
+            fixedOffset = _fixUneditablePositio2[1];
+
+        args.push(fixedNode, fixedOffset);
       });
       if (args.length < 2) {
         args = args.concat(args);
