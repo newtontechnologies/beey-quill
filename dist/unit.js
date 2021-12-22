@@ -2810,8 +2810,11 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
+      } else if (change && mutations.length === 0) {
+        // naive optimization
+        this.delta = oldDelta.compose(change);
       } else {
-        this.delta = this.getDelta(); // TODO místo toho this.delta = this.delta.compose(change);
+        this.delta = this.getDelta();
         if (!change || !(0, _deepEqual2.default)(oldDelta.compose(change), this.delta)) {
           change = oldDelta.diff(this.delta, cursorIndex);
         }
