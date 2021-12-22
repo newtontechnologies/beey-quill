@@ -208,6 +208,9 @@ class Editor {
         }
       }, new Delta());
       this.delta = oldDelta.compose(change);
+    } else if (change && mutations.length === 0) {
+      // naive optimization
+      this.delta = oldDelta.compose(change);
     } else {
       this.delta = this.getDelta();
       if (!change || !equal(oldDelta.compose(change), this.delta)) {
