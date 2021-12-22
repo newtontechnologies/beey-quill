@@ -187,6 +187,17 @@ class Editor {
     return this.applyDelta(delta);
   }
 
+  cleanDocumentDelta() {
+    while (this.delta.ops.length > 0) {
+      if (!this.delta.ops[this.delta.ops.length - 1].insert) {
+        // remove trailing retains and deletes
+        this.delta.ops.pop();
+      } else {
+        break;
+      }
+    }
+  }
+
   update(change, mutations = [], cursorIndex = undefined) {
     let oldDelta = this.delta;
     if (mutations.length === 1 &&
@@ -211,6 +222,7 @@ class Editor {
     } else if (change && mutations.length === 0) {
       // naive optimization
       this.delta = oldDelta.compose(change);
+      this.cleanDocumentDelta();
     } else {
       this.delta = this.getDelta();
       if (!change || !equal(oldDelta.compose(change), this.delta)) {

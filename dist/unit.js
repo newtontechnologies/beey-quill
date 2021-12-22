@@ -2787,6 +2787,18 @@ var Editor = function () {
       return this.applyDelta(delta);
     }
   }, {
+    key: 'cleanDocumentDelta',
+    value: function cleanDocumentDelta() {
+      while (this.delta.ops.length > 0) {
+        if (!this.delta.ops[this.delta.ops.length - 1].insert) {
+          // remove trailing retains and deletes
+          this.delta.ops.pop();
+        } else {
+          break;
+        }
+      }
+    }
+  }, {
     key: 'update',
     value: function update(change) {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
@@ -2813,6 +2825,7 @@ var Editor = function () {
       } else if (change && mutations.length === 0) {
         // naive optimization
         this.delta = oldDelta.compose(change);
+        this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();
         if (!change || !(0, _deepEqual2.default)(oldDelta.compose(change), this.delta)) {
