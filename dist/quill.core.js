@@ -2580,6 +2580,7 @@ var Editor = function () {
       var scrollLength = this.scroll.length();
       this.scroll.batchStart();
       delta = normalizeDelta(delta);
+      var normalizedDelta = (0, _clone2.default)(delta);
       delta.reduce(function (index, op) {
         var length = op.retain || op.delete || op.insert.length || 1;
         var attributes = op.attributes || {};
@@ -2629,7 +2630,8 @@ var Editor = function () {
         return index + (op.retain || op.insert.length || 1);
       }, 0);
       this.scroll.batchEnd();
-      return this.update(delta);
+      this.update(delta);
+      return normalizedDelta;
     }
   }, {
     key: 'deleteText',
@@ -7007,6 +7009,7 @@ var History = function (_Module) {
     value: function change(source, dest) {
       if (this.stack[source].length === 0) return;
       var delta = this.stack[source].pop();
+      if (delta[source].ops.length == 0) return;
       this.stack[dest].push(delta);
       this.lastRecorded = 0;
       this.ignoreChange = true;
