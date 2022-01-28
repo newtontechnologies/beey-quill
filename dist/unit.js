@@ -5158,8 +5158,9 @@ function handleDeleteRange(range) {
 function handleEnter(range, context) {
   var _this3 = this;
 
+  var delta = new _quillDelta2.default().retain(range.index);
   if (range.length > 0) {
-    this.quill.scroll.deleteAt(range.index, range.length); // So we do not trigger text-change
+    delta = delta.delete(range.length);
   }
   var lineFormats = Object.keys(context.format).reduce(function (lineFormats, format) {
     if (_parchment2.default.query(format, _parchment2.default.Scope.BLOCK) && !Array.isArray(context.format[format])) {
@@ -5167,7 +5168,8 @@ function handleEnter(range, context) {
     }
     return lineFormats;
   }, {});
-  this.quill.insertText(range.index, '\n', lineFormats, _quill2.default.sources.USER);
+  delta.insert('\n');
+  this.quill.updateContents(delta, _quill2.default.sources.USER);
   // Earlier scroll.deleteAt might have messed up our selection,
   // so insertText's built in selection preservation is not reliable
   this.quill.setSelection(range.index + 1, _quill2.default.sources.SILENT);
