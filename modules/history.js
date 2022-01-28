@@ -28,6 +28,7 @@ class History extends Module {
   change(source, dest) {
     if (this.stack[source].length === 0) return;
     let delta = this.stack[source].pop();
+    if (delta[source].ops.length == 0) return;
     this.stack[dest].push(delta);
     this.lastRecorded = 0;
     this.ignoreChange = true;
