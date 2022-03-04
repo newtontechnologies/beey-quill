@@ -17,6 +17,7 @@ class Editor {
   }
 
   applyDelta(delta) {
+    const originalDelta = clone(delta);
     let consumeNextNewline = false;
     this.scroll.update();
     let scrollLength = this.scroll.length();
@@ -63,7 +64,7 @@ class Editor {
       return index + (op.retain || op.insert.length || 1);
     }, 0);
     this.scroll.batchEnd();
-    return this.update(delta);
+    return this.update(delta, undefined, undefined, originalDelta);
   }
 
   deleteText(index, length) {
@@ -198,7 +199,7 @@ class Editor {
     }
   }
 
-  update(change, mutations = [], cursorIndex = undefined) {
+  update(change, mutations = [], cursorIndex = undefined, deltaSinceLastUpdate = undefined) {
     let oldDelta = this.delta;
     if (mutations.length === 1 &&
         mutations[0].type === 'characterData' &&
@@ -219,9 +220,9 @@ class Editor {
         }
       }, new Delta());
       this.delta = oldDelta.compose(change);
-    } else if (change && mutations.length === 0) {
+    } else if (change && mutations.length === 0 && deltaSinceLastUpdate) {
       // naive optimization
-      this.delta = oldDelta.compose(change);
+      this.delta = oldDelta.compose(deltaSinceLastUpdate);
       this.cleanDocumentDelta();
     } else {
       this.delta = this.getDelta();
