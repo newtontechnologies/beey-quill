@@ -2575,12 +2575,12 @@ var Editor = function () {
     value: function applyDelta(delta) {
       var _this = this;
 
+      var originalDelta = (0, _clone2.default)(delta);
       var consumeNextNewline = false;
       this.scroll.update();
       var scrollLength = this.scroll.length();
       this.scroll.batchStart();
       delta = normalizeDelta(delta);
-      var normalizedDelta = (0, _clone2.default)(delta);
       delta.reduce(function (index, op) {
         var length = op.retain || op.delete || op.insert.length || 1;
         var attributes = op.attributes || {};
@@ -2630,8 +2630,7 @@ var Editor = function () {
         return index + (op.retain || op.insert.length || 1);
       }, 0);
       this.scroll.batchEnd();
-      this.update(delta);
-      return normalizedDelta;
+      return this.update(delta, undefined, undefined, originalDelta);
     }
   }, {
     key: 'deleteText',
@@ -2805,6 +2804,7 @@ var Editor = function () {
     value: function update(change) {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
       var cursorIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+      var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
 
       var oldDelta = this.delta;
       if (mutations.length === 1 && mutations[0].type === 'characterData' && _parchment2.default.find(mutations[0].target)) {
@@ -2824,9 +2824,9 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
-      } else if (change && mutations.length === 0) {
+      } else if (change && mutations.length === 0 && deltaSinceLastUpdate) {
         // naive optimization
-        this.delta = oldDelta.compose(change);
+        this.delta = oldDelta.compose(deltaSinceLastUpdate);
         this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();
