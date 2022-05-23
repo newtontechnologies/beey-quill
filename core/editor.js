@@ -77,7 +77,8 @@ class Editor {
 
   deleteText(index, length) {
     this.scroll.deleteAt(index, length);
-    return this.update(new Delta().retain(index).delete(length));
+    const delta = new Delta().retain(index).delete(length);
+    return this.update(delta, undefined, undefined, delta);
   }
 
   formatLine(index, length, formats = {}) {
@@ -106,7 +107,8 @@ class Editor {
     Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, length, format, formats[format]);
     });
-    return this.update(new Delta().retain(index).retain(length, clone(formats)));
+    const delta = new Delta().retain(index).retain(length, clone(formats));
+    return this.update(delta, undefined, undefined, delta);
   }
 
   getContents(index, length) {
@@ -166,7 +168,8 @@ class Editor {
     Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, text.length, format, formats[format]);
     });
-    return this.update(new Delta().retain(index).insert(text, clone(formats)));
+    const delta = new Delta().retain(index).insert(text, clone(formats));
+    return this.update(delta, undefined, undefined, delta);
   }
 
   isBlank() {
