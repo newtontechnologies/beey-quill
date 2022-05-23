@@ -2576,24 +2576,20 @@ var Editor = function () {
       var _this = this;
 
       var originalDelta = (0, _clone2.default)(delta);
-      var consumeNextNewline = false;
       this.scroll.update();
       var scrollLength = this.scroll.length();
       this.scroll.batchStart();
-      delta = normalizeDelta(delta);
-      delta.reduce(function (index, op) {
+      var normalizedDelta = normalizeDelta(delta);
+      var deleteDelta = new _quillDelta2.default();
+      normalizedDelta.reduce(function (index, op) {
         var length = op.retain || op.delete || op.insert.length || 1;
         var attributes = op.attributes || {};
+        var addedNewline = false;
         if (op.insert != null) {
+          deleteDelta.retain(length);
           if (typeof op.insert === 'string') {
             var text = op.insert;
-            if (text.endsWith('\n') && consumeNextNewline) {
-              consumeNextNewline = false;
-              text = text.slice(0, -1);
-            }
-            if (index >= scrollLength && !text.endsWith('\n')) {
-              consumeNextNewline = true;
-            }
+            addedNewline = !text.endsWith('\n') && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
             _this.scroll.insertAt(index, text);
 
             var _scroll$line = _this.scroll.line(index),
@@ -2613,30 +2609,38 @@ var Editor = function () {
           } else if (_typeof(op.insert) === 'object') {
             var key = Object.keys(op.insert)[0]; // There should only be one key
             if (key == null) return index;
+            addedNewline = _this.scroll.query(key, _parchment.Scope.INLINE) != null && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
             _this.scroll.insertAt(index, key, op.insert[key]);
           }
           scrollLength += length;
+        } else {
+          deleteDelta.push(op);
         }
         Object.keys(attributes).forEach(function (name) {
           _this.scroll.formatAt(index, length, name, attributes[name]);
         });
-        return index + length;
+        var addedLength = addedNewline ? 1 : 0;
+        scrollLength += addedLength;
+        deleteDelta.delete(addedLength);
+        return index + length + addedLength;
       }, 0);
-      delta.reduce(function (index, op) {
+      deleteDelta.reduce(function (index, op) {
         if (typeof op.delete === 'number') {
           _this.scroll.deleteAt(index, op.delete);
           return index;
         }
-        return index + (op.retain || op.insert.length || 1);
+        var length = op.retain || op.insert.length || 1;
+        return index + length;
       }, 0);
       this.scroll.batchEnd();
-      return this.update(delta, undefined, undefined, originalDelta);
+      return this.update(normalizedDelta, undefined, undefined, originalDelta);
     }
   }, {
     key: 'deleteText',
     value: function deleteText(index, length) {
       this.scroll.deleteAt(index, length);
-      return this.update(new _quillDelta2.default().retain(index).delete(length));
+      var delta = new _quillDelta2.default().retain(index).delete(length);
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'formatLine',
@@ -2675,7 +2679,8 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this3.scroll.formatAt(index, length, format, formats[format]);
       });
-      return this.update(new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats)));
+      var delta = new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats));
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'getContents',
@@ -2750,7 +2755,8 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this4.scroll.formatAt(index, text.length, format, formats[format]);
       });
-      return this.update(new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats)));
+      var delta = new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats));
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'isBlank',
@@ -13631,10 +13637,97 @@ describe('Editor', function () {
       expect(this.container).toEqualHTML('<p><em><img src="/assets/favicon.png"></em>');
     });
 
-    it('old list', function () {
-      var editor = this.initialize(_editor2.default, '');
-      editor.applyDelta(new _quillDelta2.default().insert('\n', { bullet: true }).insert('\n', { list: true }));
-      expect(this.container).toEqualHTML('<ul><li><br></li></ul><ol><li><br></li></ol><p><br></p>');
+    it('insert text with newline before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).insert('5678\n'));
+      expect(this.container).toEqualHTML('<p>0123</p><p>5678</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+    });
+
+    it('insert attributed text with newline before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).insert('5678', { bold: true }).insert('\n'));
+      expect(this.container).toEqualHTML('<p>0123</p><p><strong>5678</strong></p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+    });
+
+    it('multiple inserts and deletes', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p>');
+      editor.applyDelta(new _quillDelta2.default().retain(1).insert('a').delete(2).insert('cd').delete(1).insert('efg'));
+      expect(this.container).toEqualHTML('<p>0acdefg</p>');
+    });
+
+    it('insert text with delete in existing block', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(4).insert('abc')
+      // Retain newline at end of block being inserted into.
+      .retain(1).delete(1));
+      expect(this.container).toEqualHTML('<p>0123abc</p>');
+    });
+
+    it('insert text with delete before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5)
+      // Explicit newline required to maintain correct index calculation for the delete.
+      .insert('abc\n').delete(1));
+      expect(this.container).toEqualHTML('<p>0123</p><p>abc</p>');
+    });
+
+    it('insert inline embed with delete in existing block', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(4).insert({ image: '/assets/favicon.png' })
+      // Retain newline at end of block being inserted into.
+      .retain(1).delete(1));
+      expect(this.container).toEqualHTML('<p>0123<img src="/assets/favicon.png"></p>');
+    });
+
+    it('insert inline embed with delete before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).insert({ image: '/assets/favicon.png' })
+      // Explicit newline required to maintain correct index calculation for the delete.
+      .insert('\n').delete(1));
+      expect(this.container).toEqualHTML('<p>0123</p><p><img src="/assets/favicon.png"></p>');
+    });
+
+    it('insert inline embed with delete before block embed using delete op first', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).delete(1).insert({ image: '/assets/favicon.png' })
+      // Explicit newline required to maintain correct index calculation for the delete.
+      .insert('\n'));
+      expect(this.container).toEqualHTML('<p>0123</p><p><img src="/assets/favicon.png"></p>');
+    });
+
+    it('insert inline embed and text with delete before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).insert({ image: '/assets/favicon.png' })
+      // Explicit newline required to maintain correct index calculation for the delete.
+      .insert('abc\n').delete(1));
+      expect(this.container).toEqualHTML('<p>0123</p><p><img src="/assets/favicon.png">abc</p>');
+    });
+
+    it('insert block embed with delete before block embed', function () {
+      var editor = this.initialize(_editor2.default, '<p>0123</p><iframe src="#" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+      editor.applyDelta(new _quillDelta2.default().retain(5).insert({ video: '#changed' }).delete(1));
+      expect(this.container).toEqualHTML('<p>0123</p><iframe src="#changed" class="ql-video" frameborder="0" allowfullscreen="true"></iframe>');
+    });
+
+    it('deletes block embed and appends text', function () {
+      var editor = this.initialize(_editor2.default, '<p><br></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe><p>b</p>');
+      editor.applyDelta(new _quillDelta2.default().retain(1).insert('a').delete(1));
+      expect(this.container).toEqualHTML('<p><br></p><p>ab</p>');
+    });
+
+    it('multiple delete block embed and append texts', function () {
+      var editor = this.initialize(_editor2.default, '<p><br></p><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe><p>b</p>');
+      editor.applyDelta(new _quillDelta2.default().retain(1).insert('a').delete(1).insert('!').delete(1));
+      expect(this.container).toEqualHTML('<p><br></p><p>a!b</p>');
+    });
+
+    it('multiple nonconsecutive delete block embed and append texts', function () {
+      var editor = this.initialize(_editor2.default, '<p><br></p>\n         <iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe>\n         <p>a</p>\n         <iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe>\n         <p>bb</p>\n         <iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe>\n         <p>ccc</p>\n         <iframe class="ql-video" frameborder="0" allowfullscreen="true" src="#"></iframe>\n         <p>dddd</p>');
+      var old = editor.getDelta();
+      var delta = new _quillDelta2.default().retain(1).insert('1').delete(1).retain(2).insert('2').delete(1).retain(3).insert('3').delete(1).retain(4).insert('4').delete(1);
+      editor.applyDelta(delta);
+      expect(editor.getDelta()).toEqual(old.compose(delta));
+      expect(this.container).toEqualHTML('<p><br></p><p>1a</p><p>2bb</p><p>3ccc</p><p>4dddd</p>');
     });
 
     it('improper block embed insert', function () {

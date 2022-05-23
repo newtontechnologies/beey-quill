@@ -2576,24 +2576,20 @@ var Editor = function () {
       var _this = this;
 
       var originalDelta = (0, _clone2.default)(delta);
-      var consumeNextNewline = false;
       this.scroll.update();
       var scrollLength = this.scroll.length();
       this.scroll.batchStart();
-      delta = normalizeDelta(delta);
-      delta.reduce(function (index, op) {
+      var normalizedDelta = normalizeDelta(delta);
+      var deleteDelta = new _quillDelta2.default();
+      normalizedDelta.reduce(function (index, op) {
         var length = op.retain || op.delete || op.insert.length || 1;
         var attributes = op.attributes || {};
+        var addedNewline = false;
         if (op.insert != null) {
+          deleteDelta.retain(length);
           if (typeof op.insert === 'string') {
             var text = op.insert;
-            if (text.endsWith('\n') && consumeNextNewline) {
-              consumeNextNewline = false;
-              text = text.slice(0, -1);
-            }
-            if (index >= scrollLength && !text.endsWith('\n')) {
-              consumeNextNewline = true;
-            }
+            addedNewline = !text.endsWith('\n') && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
             _this.scroll.insertAt(index, text);
 
             var _scroll$line = _this.scroll.line(index),
@@ -2613,30 +2609,38 @@ var Editor = function () {
           } else if (_typeof(op.insert) === 'object') {
             var key = Object.keys(op.insert)[0]; // There should only be one key
             if (key == null) return index;
+            addedNewline = _this.scroll.query(key, _parchment.Scope.INLINE) != null && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
             _this.scroll.insertAt(index, key, op.insert[key]);
           }
           scrollLength += length;
+        } else {
+          deleteDelta.push(op);
         }
         Object.keys(attributes).forEach(function (name) {
           _this.scroll.formatAt(index, length, name, attributes[name]);
         });
-        return index + length;
+        var addedLength = addedNewline ? 1 : 0;
+        scrollLength += addedLength;
+        deleteDelta.delete(addedLength);
+        return index + length + addedLength;
       }, 0);
-      delta.reduce(function (index, op) {
+      deleteDelta.reduce(function (index, op) {
         if (typeof op.delete === 'number') {
           _this.scroll.deleteAt(index, op.delete);
           return index;
         }
-        return index + (op.retain || op.insert.length || 1);
+        var length = op.retain || op.insert.length || 1;
+        return index + length;
       }, 0);
       this.scroll.batchEnd();
-      return this.update(delta, undefined, undefined, originalDelta);
+      return this.update(normalizedDelta, undefined, undefined, originalDelta);
     }
   }, {
     key: 'deleteText',
     value: function deleteText(index, length) {
       this.scroll.deleteAt(index, length);
-      return this.update(new _quillDelta2.default().retain(index).delete(length));
+      var delta = new _quillDelta2.default().retain(index).delete(length);
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'formatLine',
@@ -2675,7 +2679,8 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this3.scroll.formatAt(index, length, format, formats[format]);
       });
-      return this.update(new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats)));
+      var delta = new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats));
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'getContents',
@@ -2750,7 +2755,8 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this4.scroll.formatAt(index, text.length, format, formats[format]);
       });
-      return this.update(new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats)));
+      var delta = new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats));
+      return this.update(delta, undefined, undefined, delta);
     }
   }, {
     key: 'isBlank',
