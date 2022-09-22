@@ -126,7 +126,15 @@ function getLastChangeIndex(delta) {
     length += (op.delete || 0);
     return length;
   }, 0);
-  let changeIndex = delta.length() - deleteLength;
+  let trailingRetainLength = 0;
+  for (let i = delta.ops.length - 1; i >= 0; i -= 1) {
+    if (delta.ops[i].retain) {
+      trailingRetainLength += delta.ops[i].retain;
+    } else {
+      break;
+    }
+  }
+  let changeIndex = delta.length() - deleteLength - trailingRetainLength;
   if (endsWithNewlineChange(delta)) {
     changeIndex -= 1;
   }

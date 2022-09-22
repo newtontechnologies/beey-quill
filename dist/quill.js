@@ -1,5 +1,5 @@
 /*!
- * Quill Editor v1.4.0
+ * Quill Editor v1.4.6
  * https://quilljs.com/
  * Copyright (c) 2014, Jason Chen
  * Copyright (c) 2013, salesforce.com
@@ -1583,7 +1583,7 @@ Quill.DEFAULTS = {
 Quill.events = _emitter4.default.events;
 Quill.sources = _emitter4.default.sources;
 // eslint-disable-next-line no-undef
-Quill.version =  false ? 'dev' : "1.4.0";
+Quill.version =  false ? 'dev' : "1.4.6";
 
 Quill.imports = {
   'delta': _quillDelta2.default,
@@ -6757,7 +6757,15 @@ function getLastChangeIndex(delta) {
     length += op.delete || 0;
     return length;
   }, 0);
-  var changeIndex = delta.length() - deleteLength;
+  var trailingRetainLength = 0;
+  for (var i = delta.ops.length - 1; i >= 0; i -= 1) {
+    if (delta.ops[i].retain) {
+      trailingRetainLength += delta.ops[i].retain;
+    } else {
+      break;
+    }
+  }
+  var changeIndex = delta.length() - deleteLength - trailingRetainLength;
   if (endsWithNewlineChange(delta)) {
     changeIndex -= 1;
   }
