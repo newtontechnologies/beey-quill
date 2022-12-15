@@ -15,7 +15,10 @@ class History extends Module {
       if (!this.options.userOnly || source === Quill.sources.USER) {
         this.record(delta, oldDelta);
       } else {
-        this.transform(delta);
+        // Silent changes clear stack and disable redo.
+        // Also it slows down format changes in long documents. Let's disable it and see
+        // what breaks!
+        // this.transform(delta);
       }
     });
     this.quill.keyboard.addBinding({ key: 'Z', shortKey: true }, this.undo.bind(this));
