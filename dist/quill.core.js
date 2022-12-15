@@ -6263,7 +6263,10 @@ var History = function (_Module) {
       if (!_this.options.userOnly || source === _quill2.default.sources.USER) {
         _this.record(delta, oldDelta);
       } else {
-        _this.transform(delta);
+        // Silent changes clear stack and disable redo.
+        // Also it slows down format changes in long documents. Let's disable it and see
+        // what breaks!
+        // this.transform(delta);
       }
     });
     _this.quill.keyboard.addBinding({ key: 'Z', shortKey: true }, _this.undo.bind(_this));
