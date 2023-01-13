@@ -2730,9 +2730,6 @@ var Editor = function () {
       var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
 
       var oldDelta = this.delta;
-      if (deltaSinceLastUpdate === undefined) {
-        deltaSinceLastUpdate = change;
-      }
       mutations = mutations.filter(function (mutation) {
         return !(mutation.type === 'attributes' && mutation.attributeName && mutation.attributeName.startsWith('data-'));
       });
@@ -2754,8 +2751,11 @@ var Editor = function () {
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
       } else if (change && mutations.length === 0) {
-        // naive optimization
-        this.delta = oldDelta.compose(deltaSinceLastUpdate);
+        if (deltaSinceLastUpdate) {
+          this.delta = oldDelta.compose(deltaSinceLastUpdate);
+        } else {
+          this.delta = oldDelta.compose(change);
+        }
         this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();

@@ -213,9 +213,6 @@ class Editor {
 
   update(change, mutations = [], cursorIndex = undefined, deltaSinceLastUpdate = undefined) {
     let oldDelta = this.delta;
-    if (deltaSinceLastUpdate === undefined) {
-        deltaSinceLastUpdate = change;
-    }
     mutations = mutations.filter(
         (mutation) => !(
             mutation.type === 'attributes' && mutation.attributeName &&
@@ -242,8 +239,11 @@ class Editor {
       }, new Delta());
       this.delta = oldDelta.compose(change);
     } else if (change && mutations.length === 0) {
-      // naive optimization
-      this.delta = oldDelta.compose(deltaSinceLastUpdate);
+      if (deltaSinceLastUpdate) {
+        this.delta = oldDelta.compose(deltaSinceLastUpdate);
+      } else {
+          this.delta = oldDelta.compose(change);
+      }
       this.cleanDocumentDelta();
     } else {
       this.delta = this.getDelta();
