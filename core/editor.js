@@ -213,6 +213,12 @@ class Editor {
 
   update(change, mutations = [], cursorIndex = undefined, deltaSinceLastUpdate = undefined) {
     let oldDelta = this.delta;
+    mutations = mutations.filter(
+        (mutation) => !(
+            mutation.type === 'attributes' && mutation.attributeName &&
+            mutation.attributeName.startsWith('data-')
+        )
+    );
     if (mutations.length === 1 &&
         mutations[0].type === 'characterData' &&
         Parchment.find(mutations[0].target)) {
