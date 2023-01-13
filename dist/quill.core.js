@@ -2733,6 +2733,9 @@ var Editor = function () {
       mutations = mutations.filter(function (mutation) {
         return !(mutation.type === 'attributes' && mutation.attributeName && mutation.attributeName.startsWith('data-'));
       });
+      if (mutations.length === 0 && change === null) {
+        return new _quillDelta2.default();
+      }
       if (mutations.length === 1 && mutations[0].type === 'characterData' && _parchment2.default.find(mutations[0].target)) {
         // Optimization for character changes
         var textBlot = _parchment2.default.find(mutations[0].target);

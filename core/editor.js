@@ -219,6 +219,9 @@ class Editor {
             mutation.attributeName.startsWith('data-')
         )
     );
+    if (mutations.length === 0 && change === null) {
+        return new Delta();
+    }
     if (mutations.length === 1 &&
         mutations[0].type === 'characterData' &&
         Parchment.find(mutations[0].target)) {
