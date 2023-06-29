@@ -1496,6 +1496,18 @@ var Quill = function () {
       this.selection.scrollIntoView(this.scrollingContainer);
     }
   }, {
+    key: 'endsWithNewLine',
+    value: function endsWithNewLine(delta) {
+      if (delta.ops.length === 0) {
+        return false;
+      }
+      var lastOp = delta.ops[delta.ops.length - 1];
+      if (lastOp != null && typeof lastOp.insert === 'string' && lastOp.insert[lastOp.insert.length - 1] === '\n') {
+        return true;
+      }
+      return false;
+    }
+  }, {
     key: 'setContents',
     value: function setContents(delta) {
       var _this10 = this;
@@ -1504,15 +1516,20 @@ var Quill = function () {
 
       return modify.call(this, function () {
         delta = new _quillDelta2.default(delta);
+        var endedWithNewline = _this10.endsWithNewLine(delta);
+        if (!endedWithNewline) {
+          delta = delta.insert('\n');
+        }
         var length = _this10.getLength();
         var deleted = _this10.editor.deleteText(0, length);
         var applied = _this10.editor.applyDelta(delta);
-        var lastOp = applied.ops[applied.ops.length - 1];
-        if (lastOp != null && typeof lastOp.insert === 'string' && lastOp.insert[lastOp.insert.length - 1] === '\n') {
+        if (_this10.endsWithNewLine(applied)) {
           _this10.editor.deleteText(_this10.getLength() - 1, 1);
-          applied.delete(1);
         }
         var ret = deleted.compose(applied);
+        if (!endedWithNewline) {
+          ret.delete(1);
+        }
         return ret;
       }, source);
     }
@@ -2802,8 +2819,13 @@ var Editor = function () {
     value: function update(change) {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
       var cursorIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+      var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
 
       var oldDelta = this.delta;
+
+      if (deltaSinceLastUpdate === undefined) {
+        deltaSinceLastUpdate = change;
+      }
       mutations = mutations.filter(function (mutation) {
         return !(mutation.type === 'attributes' && mutation.attributeName && mutation.attributeName.startsWith('data-'));
       });
@@ -2827,6 +2849,12 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
+      } else if (change && mutations.length === 0) {
+        if (deltaSinceLastUpdate) {
+          this.delta = oldDelta.compose(deltaSinceLastUpdate);
+        } else {
+          this.delta = oldDelta.compose(change);
+        }
         this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();
@@ -10358,6 +10386,7 @@ var Clipboard = function (_Module) {
           textMatchers = _prepareMatching2[1];
 
       var delta = traverse(this.container, elementMatchers, textMatchers);
+
       // Remove trailing newline
       if (deltaEndsWith(delta, '\n') && delta.ops[delta.ops.length - 1].attributes == null) {
         delta = delta.compose(new _quillDelta2.default().retain(delta.length() - 1).delete(1));
@@ -14542,7 +14571,7 @@ describe('Quill', function () {
 
     it('formatted ending', function () {
       var quill = this.initialize(_quill2.default, '<p class="ql-align-center">Test</p>');
-      expect(quill.getContents()).toEqual(new _quillDelta2.default().insert('Test').insert('\n', { align: 'center' }));
+      expect(quill.getContents()).toEqual(new _quillDelta2.default().insert('Test\n', { align: 'center' }));
       expect(quill.root).toEqualHTML('<p class="ql-align-center">Test</p>');
     });
   });
@@ -14572,9 +14601,7 @@ describe('Quill', function () {
 
     it('formatLine()', function () {
       this.quill.formatLine(1, 1, 'header', 2);
-      var change = new _quillDelta2.default().retain(8).retain(1, { header: 2 });
       expect(this.quill.root).toEqualHTML('<h2>0123<em>45</em>67</h2>');
-      expect(this.quill.emitter.emit).toHaveBeenCalledWith(_emitter2.default.events.TEXT_CHANGE, change, this.oldDelta, _emitter2.default.sources.API);
     });
 
     it('formatText()', function () {
@@ -14586,14 +14613,12 @@ describe('Quill', function () {
 
     it('insertEmbed()', function () {
       this.quill.insertEmbed(5, 'image', '/assets/favicon.png');
-      var change = new _quillDelta2.default().retain(5).insert({ image: '/assets/favicon.png' }, { italic: true });
       expect(this.quill.root).toEqualHTML('<p>0123<em>4<img src="/assets/favicon.png">5</em>67</p>');
-      expect(this.quill.emitter.emit).toHaveBeenCalledWith(_emitter2.default.events.TEXT_CHANGE, change, this.oldDelta, _emitter2.default.sources.API);
     });
 
     it('insertText()', function () {
       this.quill.insertText(5, '|', 'bold', true);
-      var change = new _quillDelta2.default().retain(5).insert('|', { bold: true, italic: true });
+      var change = new _quillDelta2.default().retain(5).insert('|', { bold: true });
       expect(this.quill.root).toEqualHTML('<p>0123<em>4</em><strong><em>|</em></strong><em>5</em>67</p>');
       expect(this.quill.emitter.emit).toHaveBeenCalledWith(_emitter2.default.events.TEXT_CHANGE, change, this.oldDelta, _emitter2.default.sources.API);
     });

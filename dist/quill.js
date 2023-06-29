@@ -1496,6 +1496,18 @@ var Quill = function () {
       this.selection.scrollIntoView(this.scrollingContainer);
     }
   }, {
+    key: 'endsWithNewLine',
+    value: function endsWithNewLine(delta) {
+      if (delta.ops.length === 0) {
+        return false;
+      }
+      var lastOp = delta.ops[delta.ops.length - 1];
+      if (lastOp != null && typeof lastOp.insert === 'string' && lastOp.insert[lastOp.insert.length - 1] === '\n') {
+        return true;
+      }
+      return false;
+    }
+  }, {
     key: 'setContents',
     value: function setContents(delta) {
       var _this10 = this;
@@ -1504,15 +1516,20 @@ var Quill = function () {
 
       return modify.call(this, function () {
         delta = new _quillDelta2.default(delta);
+        var endedWithNewline = _this10.endsWithNewLine(delta);
+        if (!endedWithNewline) {
+          delta = delta.insert('\n');
+        }
         var length = _this10.getLength();
         var deleted = _this10.editor.deleteText(0, length);
         var applied = _this10.editor.applyDelta(delta);
-        var lastOp = applied.ops[applied.ops.length - 1];
-        if (lastOp != null && typeof lastOp.insert === 'string' && lastOp.insert[lastOp.insert.length - 1] === '\n') {
+        if (_this10.endsWithNewLine(applied)) {
           _this10.editor.deleteText(_this10.getLength() - 1, 1);
-          applied.delete(1);
         }
         var ret = deleted.compose(applied);
+        if (!endedWithNewline) {
+          ret.delete(1);
+        }
         return ret;
       }, source);
     }
@@ -2802,8 +2819,13 @@ var Editor = function () {
     value: function update(change) {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
       var cursorIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+      var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
 
       var oldDelta = this.delta;
+
+      if (deltaSinceLastUpdate === undefined) {
+        deltaSinceLastUpdate = change;
+      }
       mutations = mutations.filter(function (mutation) {
         return !(mutation.type === 'attributes' && mutation.attributeName && mutation.attributeName.startsWith('data-'));
       });
@@ -2827,6 +2849,12 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
+      } else if (change && mutations.length === 0) {
+        if (deltaSinceLastUpdate) {
+          this.delta = oldDelta.compose(deltaSinceLastUpdate);
+        } else {
+          this.delta = oldDelta.compose(change);
+        }
         this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();
@@ -10358,6 +10386,7 @@ var Clipboard = function (_Module) {
           textMatchers = _prepareMatching2[1];
 
       var delta = traverse(this.container, elementMatchers, textMatchers);
+
       // Remove trailing newline
       if (deltaEndsWith(delta, '\n') && delta.ops[delta.ops.length - 1].attributes == null) {
         delta = delta.compose(new _quillDelta2.default().retain(delta.length() - 1).delete(1));
