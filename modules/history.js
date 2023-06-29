@@ -128,7 +128,7 @@ function getLastChangeIndex(delta) {
   }, 0);
   let trailingRetainLength = 0;
   for (let i = delta.ops.length - 1; i >= 0; i -= 1) {
-    if (delta.ops[i].retain) {
+    if (delta.ops[i].retain && !delta.ops[i].attributes) {
       trailingRetainLength += delta.ops[i].retain;
     } else {
       break;
