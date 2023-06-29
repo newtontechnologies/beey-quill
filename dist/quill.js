@@ -1,5 +1,5 @@
 /*!
- * Quill Editor v1.4.8
+ * Quill Editor v1.4.9
  * https://quilljs.com/
  * Copyright (c) 2014, Jason Chen
  * Copyright (c) 2013, salesforce.com
@@ -1583,7 +1583,7 @@ Quill.DEFAULTS = {
 Quill.events = _emitter4.default.events;
 Quill.sources = _emitter4.default.sources;
 // eslint-disable-next-line no-undef
-Quill.version =  false ? 'dev' : "1.4.8";
+Quill.version =  false ? 'dev' : "1.4.9";
 
 Quill.imports = {
   'delta': _quillDelta2.default,
