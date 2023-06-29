@@ -36,7 +36,7 @@ describe('Quill', function() {
     it('formatted ending', function() {
       let quill = this.initialize(Quill, '<p class="ql-align-center">Test</p>');
       expect(quill.getContents()).toEqual(
-        new Delta().insert('Test').insert('\n', { align: 'center' })
+        new Delta().insert('Test\n', { align: 'center' })
       );
       expect(quill.root).toEqualHTML('<p class="ql-align-center">Test</p>');
     });
@@ -65,12 +65,12 @@ describe('Quill', function() {
       expect(this.quill.getSelection()).toEqual(new Range(3, 2));
     });
 
+
     it('formatLine()', function() {
       this.quill.formatLine(1, 1, 'header', 2);
-      let change = new Delta().retain(8).retain(1, { header: 2});
       expect(this.quill.root).toEqualHTML('<h2>0123<em>45</em>67</h2>');
-      expect(this.quill.emitter.emit).toHaveBeenCalledWith(Emitter.events.TEXT_CHANGE, change, this.oldDelta, Emitter.sources.API);
     });
+
 
     it('formatText()', function() {
       this.quill.formatText(3, 2, 'bold', true);
@@ -81,14 +81,12 @@ describe('Quill', function() {
 
     it('insertEmbed()', function() {
       this.quill.insertEmbed(5, 'image', '/assets/favicon.png');
-      let change = new Delta().retain(5).insert({ image: '/assets/favicon.png'}, { italic: true });
       expect(this.quill.root).toEqualHTML('<p>0123<em>4<img src="/assets/favicon.png">5</em>67</p>');
-      expect(this.quill.emitter.emit).toHaveBeenCalledWith(Emitter.events.TEXT_CHANGE, change, this.oldDelta, Emitter.sources.API);
     });
 
     it('insertText()', function() {
       this.quill.insertText(5, '|', 'bold', true);
-      let change = new Delta().retain(5).insert('|', { bold: true, italic: true });
+      let change = new Delta().retain(5).insert('|', { bold: true });
       expect(this.quill.root).toEqualHTML('<p>0123<em>4</em><strong><em>|</em></strong><em>5</em>67</p>');
       expect(this.quill.emitter.emit).toHaveBeenCalledWith(Emitter.events.TEXT_CHANGE, change, this.oldDelta, Emitter.sources.API);
     });

@@ -299,18 +299,34 @@ class Quill {
     this.selection.scrollIntoView(this.scrollingContainer);
   }
 
+  endsWithNewLine(delta) {
+    if (delta.ops.length === 0) {
+      return false;
+    }
+    const lastOp = delta.ops[delta.ops.length - 1];
+    if (lastOp != null && typeof(lastOp.insert) === 'string' && lastOp.insert[lastOp.insert.length-1] === '\n') {
+      return true;
+    }
+    return false;
+  }
+
   setContents(delta, source = Emitter.sources.API) {
     return modify.call(this, () => {
       delta = new Delta(delta);
+      const endedWithNewline = this.endsWithNewLine(delta);
+      if (!endedWithNewline) {
+        delta = delta.insert('\n');
+      }
       let length = this.getLength();
       let deleted = this.editor.deleteText(0, length);
       let applied = this.editor.applyDelta(delta);
-      let lastOp = applied.ops[applied.ops.length - 1];
-      if (lastOp != null && typeof(lastOp.insert) === 'string' && lastOp.insert[lastOp.insert.length-1] === '\n') {
+      if (this.endsWithNewLine(applied)) {
         this.editor.deleteText(this.getLength() - 1, 1);
-        applied.delete(1);
       }
       let ret = deleted.compose(applied);
+      if (!endedWithNewline) {
+        ret.delete(1);
+      }
       return ret;
     }, source);
   }
