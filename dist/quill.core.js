@@ -2604,7 +2604,7 @@ var Editor = function () {
           } else if (_typeof(op.insert) === 'object') {
             var key = Object.keys(op.insert)[0]; // There should only be one key
             if (key == null) return index;
-            addedNewline = _this.scroll.query(key, _parchment.Scope.INLINE) != null && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
+            addedNewline = _parchment2.default.query(key, _parchment2.default.Scope.INLINE) != null && (scrollLength <= index || _this.scroll.descendant(_block.BlockEmbed, index)[0]);
             _this.scroll.insertAt(index, key, op.insert[key]);
           }
           scrollLength += length;
@@ -2634,8 +2634,7 @@ var Editor = function () {
     key: 'deleteText',
     value: function deleteText(index, length) {
       this.scroll.deleteAt(index, length);
-      var delta = new _quillDelta2.default().retain(index).delete(length);
-      return this.update(delta, undefined, undefined, delta);
+      return this.update(new _quillDelta2.default().retain(index).delete(length));
     }
   }, {
     key: 'formatLine',
@@ -2674,8 +2673,7 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this3.scroll.formatAt(index, length, format, formats[format]);
       });
-      var delta = new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats));
-      return this.update(delta, undefined, undefined, delta);
+      return this.update(new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats)));
     }
   }, {
     key: 'getContents',
@@ -2750,8 +2748,7 @@ var Editor = function () {
       Object.keys(formats).forEach(function (format) {
         _this4.scroll.formatAt(index, text.length, format, formats[format]);
       });
-      var delta = new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats));
-      return this.update(delta, undefined, undefined, delta);
+      return this.update(new _quillDelta2.default().retain(index).insert(text, (0, _clone2.default)(formats)));
     }
   }, {
     key: 'isBlank',
@@ -2805,7 +2802,6 @@ var Editor = function () {
     value: function update(change) {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
       var cursorIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
-      var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
 
       var oldDelta = this.delta;
       mutations = mutations.filter(function (mutation) {
@@ -2831,12 +2827,6 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
-      } else if (change && mutations.length === 0) {
-        if (deltaSinceLastUpdate) {
-          this.delta = oldDelta.compose(deltaSinceLastUpdate);
-        } else {
-          this.delta = oldDelta.compose(change);
-        }
         this.cleanDocumentDelta();
       } else {
         this.delta = this.getDelta();
@@ -7176,7 +7166,7 @@ function getLastChangeIndex(delta) {
   }, 0);
   var trailingRetainLength = 0;
   for (var i = delta.ops.length - 1; i >= 0; i -= 1) {
-    if (delta.ops[i].retain) {
+    if (delta.ops[i].retain && !delta.ops[i].attributes) {
       trailingRetainLength += delta.ops[i].retain;
     } else {
       break;

@@ -1,6 +1,6 @@
 import Delta from 'quill-delta';
 import DeltaOp from 'quill-delta/lib/op';
-import Parchment, { Scope } from 'parchment';
+import Parchment from 'parchment';
 import CodeBlock from '../formats/code';
 import CursorBlot from '../blots/cursor';
 import Block, { BlockEmbed, bubbleFormats } from '../blots/block';
@@ -208,7 +208,7 @@ class Editor {
     }
   }
 
-  update(change, mutations = [], cursorIndex = undefined, deltaSinceLastUpdate = undefined) {
+  update(change, mutations = [], cursorIndex = undefined) {
     let oldDelta = this.delta;
     mutations = mutations.filter(
         (mutation) => !(
@@ -238,12 +238,6 @@ class Editor {
         }
       }, new Delta());
       this.delta = oldDelta.compose(change);
-    } else if (change && mutations.length === 0) {
-      if (deltaSinceLastUpdate) {
-        this.delta = oldDelta.compose(deltaSinceLastUpdate);
-      } else {
-          this.delta = oldDelta.compose(change);
-      }
       this.cleanDocumentDelta();
     } else {
       this.delta = this.getDelta();
