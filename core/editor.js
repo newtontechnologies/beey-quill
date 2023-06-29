@@ -47,7 +47,7 @@ class Editor {
           let key = Object.keys(op.insert)[0];  // There should only be one key
           if (key == null) return index;
           addedNewline =
-            this.scroll.query(key, Scope.INLINE) != null &&
+            Parchment.query(key, Parchment.Scope.INLINE) != null &&
             (scrollLength <= index ||
               this.scroll.descendant(BlockEmbed, index)[0]);
           this.scroll.insertAt(index, key, op.insert[key]);
@@ -78,8 +78,7 @@ class Editor {
 
   deleteText(index, length) {
     this.scroll.deleteAt(index, length);
-    const delta = new Delta().retain(index).delete(length);
-    return this.update(delta, undefined, undefined, delta);
+    return this.update(new Delta().retain(index).delete(length));
   }
 
   formatLine(index, length, formats = {}) {
@@ -108,8 +107,7 @@ class Editor {
     Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, length, format, formats[format]);
     });
-    const delta = new Delta().retain(index).retain(length, clone(formats));
-    return this.update(delta, undefined, undefined, delta);
+    return this.update(new Delta().retain(index).retain(length, clone(formats)));
   }
 
   getContents(index, length) {
@@ -169,8 +167,7 @@ class Editor {
     Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, text.length, format, formats[format]);
     });
-    const delta = new Delta().retain(index).insert(text, clone(formats));
-    return this.update(delta, undefined, undefined, delta);
+    return this.update(new Delta().retain(index).insert(text, clone(formats)));
   }
 
   isBlank() {
