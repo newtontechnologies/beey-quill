@@ -47,7 +47,7 @@ class Editor {
           let key = Object.keys(op.insert)[0];  // There should only be one key
           if (key == null) return index;
           addedNewline =
-            this.scroll.query(key, Scope.INLINE) != null &&
+            Parchment.query(key, Parchment.Scope.INLINE) != null &&
             (scrollLength <= index ||
               this.scroll.descendant(BlockEmbed, index)[0]);
           this.scroll.insertAt(index, key, op.insert[key]);
