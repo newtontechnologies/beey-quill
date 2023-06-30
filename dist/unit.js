@@ -2678,7 +2678,7 @@ var Editor = function () {
         });
       });
       this.scroll.optimize();
-      return this.update(new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats)));
+      return this.update(new _quillDelta2.default().retain(index).retain(length, (0, _clone2.default)(formats)), undefined, undefined, undefined, false);
     }
   }, {
     key: 'formatText',
@@ -2820,6 +2820,7 @@ var Editor = function () {
       var mutations = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
       var cursorIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
       var deltaSinceLastUpdate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : undefined;
+      var allowDeltaOptimization = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
 
       var oldDelta = this.delta;
 
@@ -2849,7 +2850,7 @@ var Editor = function () {
           }
         }, new _quillDelta2.default());
         this.delta = oldDelta.compose(change);
-      } else if (change && mutations.length === 0) {
+      } else if (change && mutations.length === 0 && allowDeltaOptimization) {
         if (deltaSinceLastUpdate) {
           this.delta = oldDelta.compose(deltaSinceLastUpdate);
         } else {
@@ -16158,6 +16159,20 @@ describe('History', function () {
       var changed = this.quill.getContents();
       expect(changed).not.toEqual(this.original);
       this.quill.history.undo();
+      expect(this.quill.getContents()).toEqual(this.original);
+      this.quill.history.redo();
+      expect(this.quill.getContents()).toEqual(changed);
+    });
+
+    it('format', function () {
+      console.log('this goes');
+      this.quill.insertText(6, '\n');
+      this.quill.insertText(2, '\n');
+      this.quill.formatLine(3, 1, { header: 1 });
+      var changed = this.quill.getContents();
+      console.log(changed);
+      this.quill.history.undo();
+      console.log(this.quill.getContents());
       expect(this.quill.getContents()).toEqual(this.original);
       this.quill.history.redo();
       expect(this.quill.getContents()).toEqual(changed);

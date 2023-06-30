@@ -100,7 +100,7 @@ class Editor {
       });
     });
     this.scroll.optimize();
-    return this.update(new Delta().retain(index).retain(length, clone(formats)));
+    return this.update(new Delta().retain(index).retain(length, clone(formats)), undefined, undefined, undefined, false);
   }
 
   formatText(index, length, formats = {}) {
@@ -208,7 +208,13 @@ class Editor {
     }
   }
 
-  update(change, mutations = [], cursorIndex = undefined, deltaSinceLastUpdate = undefined) {
+  update(
+    change,
+    mutations = [],
+    cursorIndex = undefined,
+    deltaSinceLastUpdate = undefined,
+    allowDeltaOptimization = true
+  ) {
     let oldDelta = this.delta;
 
     if (deltaSinceLastUpdate === undefined) {
@@ -242,7 +248,7 @@ class Editor {
         }
       }, new Delta());
       this.delta = oldDelta.compose(change);
-    } else if (change && mutations.length === 0) {
+    } else if (change && mutations.length === 0 && allowDeltaOptimization) {
       if (deltaSinceLastUpdate) {
         this.delta = oldDelta.compose(deltaSinceLastUpdate);
       } else {

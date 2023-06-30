@@ -90,6 +90,20 @@ describe('History', function() {
       expect(this.quill.getContents()).toEqual(changed);
     });
 
+    it('format', function() {
+      console.log('this goes');
+      this.quill.insertText(6, '\n')
+      this.quill.insertText(2, '\n');
+      this.quill.formatLine(3, 1, { header: 1 });
+      const changed = this.quill.getContents();
+      console.log(changed);
+      this.quill.history.undo();
+      console.log(this.quill.getContents());
+      expect(this.quill.getContents()).toEqual(this.original);
+      this.quill.history.redo();
+      expect(this.quill.getContents()).toEqual(changed);
+    });
+
     it('merge changes', function() {
       expect(this.quill.history.stack.undo.length).toEqual(0);
       this.quill.updateContents(new Delta().retain(12).insert('e'));
