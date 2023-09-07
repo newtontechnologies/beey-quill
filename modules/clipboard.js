@@ -83,6 +83,11 @@ class Clipboard extends Module {
       this.container.innerHTML = '';
       return new Delta().insert(text, { [CodeBlock.blotName]: formats[CodeBlock.blotName] });
     }
+    if (formats.summary) {
+      const text = this.container.innerText;
+      this.container.innerHTML = '';
+      return new Delta().insert(text, { summary: formats.summary });
+    }
     let [elementMatchers, textMatchers] = this.prepareMatching();
     let delta = traverse(this.container, elementMatchers, textMatchers);
 
