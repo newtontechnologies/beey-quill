@@ -9661,6 +9661,11 @@ var Clipboard = function (_Module) {
         this.container.innerHTML = '';
         return new _quillDelta2.default().insert(text, _defineProperty({}, _code2.default.blotName, formats[_code2.default.blotName]));
       }
+      if (formats.summary) {
+        var _text = this.container.innerText;
+        this.container.innerHTML = '';
+        return new _quillDelta2.default().insert(_text, { summary: formats.summary });
+      }
 
       var _prepareMatching = this.prepareMatching(),
           _prepareMatching2 = _slicedToArray(_prepareMatching, 2),

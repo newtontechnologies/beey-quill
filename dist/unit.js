@@ -10380,6 +10380,11 @@ var Clipboard = function (_Module) {
         this.container.innerHTML = '';
         return new _quillDelta2.default().insert(text, _defineProperty({}, _code2.default.blotName, formats[_code2.default.blotName]));
       }
+      if (formats.summary) {
+        var _text = this.container.innerText;
+        this.container.innerHTML = '';
+        return new _quillDelta2.default().insert(_text, { summary: formats.summary });
+      }
 
       var _prepareMatching = this.prepareMatching(),
           _prepareMatching2 = _slicedToArray(_prepareMatching, 2),
@@ -16165,14 +16170,11 @@ describe('History', function () {
     });
 
     it('format', function () {
-      console.log('this goes');
       this.quill.insertText(6, '\n');
       this.quill.insertText(2, '\n');
       this.quill.formatLine(3, 1, { header: 1 });
       var changed = this.quill.getContents();
-      console.log(changed);
       this.quill.history.undo();
-      console.log(this.quill.getContents());
       expect(this.quill.getContents()).toEqual(this.original);
       this.quill.history.redo();
       expect(this.quill.getContents()).toEqual(changed);
