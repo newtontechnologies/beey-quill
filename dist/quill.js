@@ -7475,7 +7475,7 @@ var History = function (_Module) {
       this.ignoreChange = true;
       this.quill.updateContents(delta[source], _quill2.default.sources.USER);
       this.ignoreChange = false;
-      var index = getLastChangeIndex(delta[source]);
+      var index = getLastChangeIndex(delta[source], true);
       this.quill.setSelection(index);
     }
   }, {
@@ -7572,13 +7572,16 @@ function getLastChangeIndex(delta) {
   }, 0);
   var trailingRetainLength = 0;
   for (var i = delta.ops.length - 1; i >= 0; i -= 1) {
-    if (delta.ops[i].retain && !delta.ops[i].attributes) {
+    if (delta.ops[i].retain) {
       trailingRetainLength += delta.ops[i].retain;
     } else {
       break;
     }
   }
-  var changeIndex = delta.length() - deleteLength - trailingRetainLength;
+  var changeIndex = delta.length() - deleteLength;
+  if (changeIndex !== trailingRetainLength) {
+    changeIndex -= trailingRetainLength;
+  }
   if (endsWithNewlineChange(delta)) {
     changeIndex -= 1;
   }

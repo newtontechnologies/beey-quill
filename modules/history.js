@@ -37,7 +37,7 @@ class History extends Module {
     this.ignoreChange = true;
     this.quill.updateContents(delta[source], Quill.sources.USER);
     this.ignoreChange = false;
-    let index = getLastChangeIndex(delta[source]);
+    let index = getLastChangeIndex(delta[source], true);
     this.quill.setSelection(index);
   }
 
@@ -131,13 +131,18 @@ function getLastChangeIndex(delta) {
   }, 0);
   let trailingRetainLength = 0;
   for (let i = delta.ops.length - 1; i >= 0; i -= 1) {
-    if (delta.ops[i].retain && !delta.ops[i].attributes) {
+    if (delta.ops[i].retain) {
       trailingRetainLength += delta.ops[i].retain;
     } else {
       break;
     }
   }
-  let changeIndex = delta.length() - deleteLength - trailingRetainLength;
+  let changeIndex = delta.length() - deleteLength;
+  if (changeIndex !== trailingRetainLength) {
+    // NOTE: We prefer to get last change index from insert or delete position,
+    // if some changes are formatting only and some are text changes.
+    changeIndex -= trailingRetainLength;
+  }
   if (endsWithNewlineChange(delta)) {
     changeIndex -= 1;
   }
