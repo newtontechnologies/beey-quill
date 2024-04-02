@@ -116,7 +116,9 @@ class Clipboard extends Module {
     let range = this.quill.getSelection();
     let delta = new Delta().retain(range.index);
     let scrollTop = this.quill.scrollingContainer.scrollTop;
-    this.container.focus();
+    // eslint-disable-next-line no-console
+    console.log('no focus');
+    // this.container.focus();
     this.quill.selection.update(Quill.sources.SILENT);
     setTimeout(() => {
       delta = delta.concat(this.convert()).delete(range.length);

@@ -7203,6 +7203,8 @@ function getLastChangeIndex(delta) {
   }
   var changeIndex = delta.length() - deleteLength;
   if (changeIndex !== trailingRetainLength) {
+    // NOTE: We prefer to get last change index from insert or delete position,
+    // if some changes are formatting only and some are text changes.
     changeIndex -= trailingRetainLength;
   }
   if (endsWithNewlineChange(delta)) {
@@ -9708,7 +9710,9 @@ var Clipboard = function (_Module) {
       var range = this.quill.getSelection();
       var delta = new _quillDelta2.default().retain(range.index);
       var scrollTop = this.quill.scrollingContainer.scrollTop;
-      this.container.focus();
+      // eslint-disable-next-line no-console
+      console.log('no focus');
+      // this.container.focus();
       this.quill.selection.update(_quill2.default.sources.SILENT);
       setTimeout(function () {
         delta = delta.concat(_this2.convert()).delete(range.length);
