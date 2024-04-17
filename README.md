@@ -36,6 +36,14 @@
 
 To get started, check out the [Quill](https://quilljs.com/) website for documentation, guides, and live demos!
 
+## Fork description and quick build instructions
+
+This fork of quill contains some optimizations and bugfixes needed by the beey editor.
+
+To deploy and use an update just build quill using `npm run build`, add whole updated
+directory dist to a commit and push. Then link to that commit directly from package.json 
+
+
 
 ## Quickstart
 
